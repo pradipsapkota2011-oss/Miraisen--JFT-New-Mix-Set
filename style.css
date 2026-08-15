@@ -218,967 +218,6 @@ body{display:flex;flex-direction:column}
 .sec{
   border-bottom:1px solid #d0d0d0 !important;
 }
-#feedbackPage {
-  display: none;
-  background: #f4f4f4;
-  min-height: 100vh;
-  font-family: Arial, sans-serif;
-}
-
-.feedback-top {
-  background: #000;
-  color: #fff;
-  padding: 12px 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.feedback-top h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.exit-test-btn {
-  background: #ffd98c;
-  border: none;
-  padding: 10px 28px;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.green-line {
-  height: 18px;
-  background: #5b922a;
-}
-
-.feedback-box {
-  width: 92%;
-  margin: 18px auto;
-  background: white;
-  border-radius: 12px 12px 0 0;
-  overflow: hidden;
-  border: 1px solid #ccc;
-}
-
-.feedback-title {
-  background: #000;
-  color: white;
-  padding: 14px;
-  font-weight: bold;
-}
-
-.feedback-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-}
-
-.feedback-table th,
-.feedback-table td {
-  border: 1px solid #d6d6d6;
-  padding: 14px 12px;
-  vertical-align: middle;
-  font-size: 14px;
-}
-
-.feedback-table th {
-  background: #f1f1f1;
-  text-align: center;
-  font-weight: bold;
-}
-
-.feedback-table th span,
-.feedback-table td span {
-  font-size: 11px;
-  color: #000;
-}
-
-.correct-mark {
-  color: green;
-  font-size: 20px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.wrong-mark {
-  color: blue;
-  font-size: 20px;
-  text-align: center;
-  font-weight: bold;
-}
-
-.feedback-answer-img {
-  width: 90px;
-  max-height: 80px;
-  object-fit: contain;
-  display: block;
-  margin: auto;
-}
-/* =========================================
-   MOBILE / TABLET RESPONSIVE DESIGN
-   ========================================= */
-
-*{
-  box-sizing:border-box;
-}
-
-html, body{
-  width:100%;
-  max-width:100%;
-  overflow-x:hidden;
-}
-
-img{
-  max-width:100%;
-  height:auto;
-}
-
-/* ---------- Tablet ---------- */
-@media (max-width: 900px){
-
-  .top{
-    height:auto !important;
-    min-height:60px;
-    padding:8px 10px;
-    gap:8px;
-  }
-
-  #questionInfo{
-    font-size:13px;
-  }
-
-  .timer{
-    font-size:12px;
-  }
-
-  .finish{
-    padding:8px 12px !important;
-    font-size:12px;
-  }
-
-  .green{
-    height:auto !important;
-    min-height:24px;
-    font-size:11px !important;
-    flex-wrap:wrap;
-    gap:3px;
-  }
-
-  .main{
-    display:flex !important;
-    flex-direction:column;
-    height:auto !important;
-    min-height:calc(100vh - 140px);
-  }
-
-  /* Section tabs */
-  .sections{
-    display:flex;
-    width:100%;
-    overflow-x:auto;
-    border-right:none !important;
-    border-bottom:1px solid #ccc;
-    background:#f7f7f7;
-  }
-
-  .sec{
-    flex:1 0 120px;
-    height:55px !important;
-    min-width:120px;
-    padding:7px 4px !important;
-    font-size:11px !important;
-    border-right:1px solid #ddd;
-    border-bottom:none !important;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-
-  .sec::before{
-    display:none !important;
-  }
-
-  .activeSec{
-    background:#e6f3da !important;
-    border-bottom:4px solid #6aa72b !important;
-    font-weight:bold;
-  }
-
-  /* Question number palette */
-  .palette{
-    display:flex;
-    flex-wrap:nowrap;
-    overflow-x:auto;
-    width:100%;
-    padding:7px !important;
-    gap:6px;
-    background:white;
-    border-bottom:1px solid #ddd;
-  }
-
-  .qbtn{
-    flex:0 0 34px;
-    width:34px !important;
-    height:28px !important;
-    line-height:28px !important;
-    margin:0 !important;
-    font-size:13px !important;
-    text-align:center;
-  }
-
-  /* Main question area */
-  .content{
-    width:100%;
-    padding:15px !important;
-  }
-
-  .inst,
-  .instruction{
-    width:100% !important;
-    max-width:100%;
-    font-size:18px !important;
-    line-height:1.5;
-    padding:10px !important;
-  }
-
-  .mainQuestion{
-    font-size:20px !important;
-    line-height:1.6;
-    word-break:break-word;
-  }
-
-  .subtitle{
-    font-size:15px !important;
-  }
-
-  .image{
-    margin:15px auto !important;
-    text-align:center;
-    width:100%;
-  }
-
-  #questionImage{
-    max-width:90% !important;
-    max-height:260px;
-    object-fit:contain;
-  }
-
-  /* Options */
-  .option{
-    width:100% !important;
-    max-width:100%;
-    margin:10px 0 !important;
-    padding:13px 10px !important;
-    font-size:17px !important;
-    min-height:48px;
-    word-break:break-word;
-  }
-
-  .imageOptions{
-    width:100%;
-  }
-
-  .imageOption{
-    width:100% !important;
-  }
-
-  .imageOption img{
-    max-width:160px;
-    max-height:130px;
-    object-fit:contain;
-  }
-
-  /* Dialog */
-  .dialogWrap{
-    width:100%;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
-
-  .dialogText{
-    width:100%;
-    font-size:18px !important;
-    line-height:1.6 !important;
-  }
-
-  .dialogImage{
-    max-width:180px !important;
-    height:auto;
-    margin:auto;
-  }
-
-  /* Double questions */
-  .partBox{
-    width:100%;
-    margin-bottom:25px;
-  }
-
-  .partTitle{
-    font-size:18px !important;
-    line-height:1.5;
-    margin-bottom:10px;
-  }
-
-  .doubleOptionRow{
-    display:flex !important;
-    flex-wrap:wrap;
-    gap:8px;
-    width:100%;
-  }
-
-  .doubleOption{
-    flex:1 1 150px;
-    min-width:120px;
-  }
-
-  .doubleOption img{
-    max-width:140px;
-    max-height:120px;
-    object-fit:contain;
-  }
-
-  .verticalOptions{
-    display:flex !important;
-    flex-direction:column;
-  }
-
-  .verticalOptions .doubleOption{
-    width:100% !important;
-    flex:auto;
-  }
-
-  /* Reading passage */
-  .readingPassage{
-    width:100% !important;
-    font-size:19px !important;
-    line-height:1.8 !important;
-    overflow-wrap:anywhere;
-  }
-
-  /* Audio */
-  #audioBox{
-    width:100%;
-    margin:10px 0;
-  }
-
-  #audioPlayer{
-    width:100% !important;
-    max-width:100%;
-  }
-
-  /* Footer */
-  .footer{
-    width:100%;
-    height:auto !important;
-    min-height:55px;
-    padding:7px 8px !important;
-    position:sticky;
-    bottom:0;
-    z-index:100;
-  }
-
-  .footer .icons{
-    font-size:18px !important;
-  }
-
-  .footer button{
-    padding:9px 12px !important;
-    font-size:13px !important;
-  }
-
-  /* Language modal */
-  .modal{
-    width:92% !important;
-    max-width:500px;
-    left:50% !important;
-    transform:translateX(-50%);
-    max-height:85vh;
-    overflow-y:auto;
-  }
-
-  .modal table{
-    width:100%;
-  }
-
-  .modal td{
-    padding:8px;
-    font-size:14px;
-  }
-}
-/* =====================================================
-   MOBILE FULL WIDTH JFT EXAM
-   Paste this at the VERY END of style.css
-===================================================== */
-
-@media screen and (max-width: 768px){
-
-  html,
-  body{
-    margin:0 !important;
-    padding:0 !important;
-    width:100% !important;
-    max-width:100% !important;
-    min-height:100dvh !important;
-    overflow-x:hidden !important;
-  }
-
-  *{
-    box-sizing:border-box !important;
-  }
-
-  /* =========================
-     TOP HEADER
-  ========================== */
-
-  .top{
-    width:100% !important;
-    height:auto !important;
-    min-height:66px !important;
-
-    display:grid !important;
-    grid-template-columns:1fr 95px 80px !important;
-
-    align-items:center !important;
-    gap:4px !important;
-
-    padding:5px 6px !important;
-  }
-
-  #questionInfo{
-    font-size:11px !important;
-    line-height:1.15 !important;
-    min-width:0 !important;
-  }
-
-  .timer{
-    font-size:10px !important;
-    line-height:1.15 !important;
-    text-align:center !important;
-  }
-
-  #time{
-    font-size:13px !important;
-  }
-
-  .finish{
-    width:100% !important;
-    min-width:0 !important;
-    padding:10px 3px !important;
-    font-size:10px !important;
-  }
-
-
-  /* =========================
-     GREEN INFO BAR
-  ========================== */
-
-  .green{
-    width:100% !important;
-    height:auto !important;
-
-    padding:3px 5px !important;
-
-    font-size:9px !important;
-    line-height:1.2 !important;
-
-    display:block !important;
-  }
-
-  .green span{
-    display:block !important;
-    width:100% !important;
-  }
-
-
-  /* =========================
-     MAIN AREA
-  ========================== */
-
-  .main{
-    width:100% !important;
-
-    display:flex !important;
-    flex-direction:column !important;
-
-    grid-template-columns:none !important;
-
-    height:auto !important;
-    min-height:calc(100dvh - 150px) !important;
-
-    overflow:visible !important;
-  }
-
-
-  /* =========================
-     SECTION TABS
-  ========================== */
-
-  .sections{
-    order:1 !important;
-
-    width:100% !important;
-    height:auto !important;
-
-    display:flex !important;
-    flex-direction:row !important;
-
-    overflow-x:auto !important;
-    overflow-y:hidden !important;
-
-    background:#f5f5f5 !important;
-
-    border-right:none !important;
-    border-bottom:1px solid #ccc !important;
-
-    scrollbar-width:none;
-  }
-
-  .sections::-webkit-scrollbar{
-    display:none;
-  }
-
-  .sec{
-    flex:1 0 25% !important;
-
-    min-width:90px !important;
-    height:48px !important;
-
-    padding:5px 3px !important;
-
-    font-size:9px !important;
-    line-height:1.1 !important;
-
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-
-    text-align:center !important;
-
-    border-right:1px solid #ddd !important;
-    border-bottom:none !important;
-  }
-
-  /* Remove vertical green bars */
-  .sec::before{
-    display:none !important;
-  }
-
-  .activeSec{
-    background:#edf8e5 !important;
-    border-bottom:4px solid #62a52c !important;
-    font-weight:bold !important;
-  }
-
-
-  /* =========================
-     QUESTION NUMBER PALETTE
-  ========================== */
-
-  .palette{
-    order:2 !important;
-
-    width:100% !important;
-    height:auto !important;
-
-    display:flex !important;
-    flex-direction:row !important;
-    flex-wrap:nowrap !important;
-
-    gap:5px !important;
-
-    padding:6px !important;
-
-    overflow-x:auto !important;
-    overflow-y:hidden !important;
-
-    border-bottom:1px solid #ddd !important;
-
-    scrollbar-width:none;
-  }
-
-  .palette::-webkit-scrollbar{
-    display:none;
-  }
-
-  .qbtn{
-    flex:0 0 32px !important;
-
-    width:32px !important;
-    height:28px !important;
-
-    margin:0 !important;
-    padding:0 !important;
-
-    line-height:28px !important;
-
-    font-size:12px !important;
-
-    text-align:center !important;
-  }
-
-
-  /* =========================
-     QUESTION CONTENT
-  ========================== */
-
-  .content{
-    order:3 !important;
-
-    width:100% !important;
-    max-width:100% !important;
-
-    padding:10px 12px 75px !important;
-
-    overflow:visible !important;
-  }
-
-
-  /* Instruction box */
-
-  .inst,
-  .instruction{
-    width:100% !important;
-    max-width:100% !important;
-
-    margin:0 0 8px 0 !important;
-
-    padding:8px 10px !important;
-
-    font-size:15px !important;
-    line-height:1.4 !important;
-  }
-
-
-  .subtitle{
-    width:100% !important;
-    font-size:14px !important;
-  }
-
-
-  .mainQuestion{
-    width:100% !important;
-
-    font-size:20px !important;
-    line-height:1.6 !important;
-
-    margin:12px 0 !important;
-
-    overflow-wrap:anywhere !important;
-  }
-
-
-  /* =========================
-     YOUR LANGUAGE BUTTON
-  ========================== */
-
-  .lang{
-    width:100% !important;
-  }
-
-  .lang button{
-    width:auto !important;
-
-    margin:5px 0 8px !important;
-
-    font-size:11px !important;
-    padding:5px 8px !important;
-  }
-
-
-  /* =========================
-     QUESTION IMAGE
-  ========================== */
-
-  .image{
-    width:100% !important;
-
-    margin:10px auto 15px !important;
-
-    text-align:center !important;
-  }
-
-  #questionImage{
-    display:block !important;
-
-    width:auto !important;
-    max-width:100% !important;
-
-    height:auto !important;
-    max-height:260px !important;
-
-    object-fit:contain !important;
-
-    margin:0 auto !important;
-  }
-
-
-  /* =========================
-     NORMAL ANSWERS
-  ========================== */
-
-  #optionContainer{
-    width:100% !important;
-    max-width:100% !important;
-  }
-
-  .option{
-    width:100% !important;
-    max-width:100% !important;
-
-    min-height:48px !important;
-
-    margin:9px 0 !important;
-
-    padding:12px 10px !important;
-
-    font-size:17px !important;
-    line-height:1.5 !important;
-
-    overflow-wrap:anywhere !important;
-  }
-
-
-  /* =========================
-     IMAGE OPTIONS
-  ========================== */
-
-  .imageOptions{
-    width:100% !important;
-
-    display:grid !important;
-    grid-template-columns:repeat(3, 1fr) !important;
-
-    gap:6px !important;
-  }
-
-  .imageOptions .option{
-    width:100% !important;
-
-    margin:0 !important;
-    padding:5px !important;
-
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-  }
-
-  .imageOptions img{
-    width:100% !important;
-    max-width:115px !important;
-
-    height:auto !important;
-    max-height:120px !important;
-
-    object-fit:contain !important;
-  }
-
-
-  /* =========================
-     DIALOG QUESTIONS
-  ========================== */
-
-  .dialogWrap{
-    width:100% !important;
-
-    display:flex !important;
-    flex-direction:column !important;
-
-    gap:10px !important;
-  }
-
-  .dialogText{
-    width:100% !important;
-
-    font-size:17px !important;
-    line-height:1.6 !important;
-  }
-
-  .dialogImage{
-    display:block !important;
-
-    max-width:80% !important;
-    max-height:230px !important;
-
-    width:auto !important;
-    height:auto !important;
-
-    margin:auto !important;
-
-    object-fit:contain !important;
-  }
-
-
-  /* =========================
-     DOUBLE QUESTIONS
-  ========================== */
-
-  .partBox{
-    width:100% !important;
-
-    margin:0 0 25px 0 !important;
-  }
-
-  .partTitle{
-    width:100% !important;
-
-    font-size:17px !important;
-    line-height:1.5 !important;
-
-    margin:8px 0 !important;
-  }
-
-  .doubleOptionRow{
-    width:100% !important;
-
-    display:grid !important;
-    grid-template-columns:repeat(3, 1fr) !important;
-
-    gap:6px !important;
-  }
-
-  .doubleOption{
-    width:100% !important;
-
-    min-width:0 !important;
-
-    margin:0 !important;
-    padding:8px 5px !important;
-  }
-
-  .doubleOption img{
-    width:100% !important;
-    max-width:110px !important;
-
-    height:auto !important;
-    max-height:120px !important;
-
-    object-fit:contain !important;
-  }
-
-
-  /* Text options in double questions */
-
-  .verticalOptions{
-    display:flex !important;
-    flex-direction:column !important;
-
-    gap:7px !important;
-  }
-
-  .verticalOptions .doubleOption{
-    width:100% !important;
-
-    min-height:46px !important;
-
-    font-size:16px !important;
-
-    margin:0 !important;
-  }
-
-
-  /* =========================
-     READING PASSAGE
-  ========================== */
-
-  .readingPassage{
-    width:100% !important;
-
-    font-size:17px !important;
-    line-height:1.8 !important;
-
-    padding:5px 0 !important;
-
-    overflow-wrap:anywhere !important;
-  }
-
-
-  /* =========================
-     AUDIO
-  ========================== */
-
-  #audioBox{
-    width:100% !important;
-
-    margin:10px 0 !important;
-  }
-
-  #audioPlayer{
-    width:100% !important;
-    max-width:100% !important;
-  }
-
-
-  /* =========================
-     BOTTOM NAVIGATION
-  ========================== */
-
-  .footer{
-    position:fixed !important;
-
-    left:0 !important;
-    right:0 !important;
-    bottom:0 !important;
-
-    width:100% !important;
-
-    height:55px !important;
-
-    padding:5px 7px !important;
-
-    z-index:9999 !important;
-
-    display:flex !important;
-
-    align-items:center !important;
-    justify-content:space-between !important;
-  }
-
-  .footer .icons{
-    font-size:18px !important;
-  }
-
-  .footer button{
-    min-width:auto !important;
-
-    padding:9px 12px !important;
-
-    margin:0 2px !important;
-
-    font-size:11px !important;
-  }
-
-
-  /* =========================
-     LANGUAGE MODAL
-  ========================== */
-
-  .modal{
-    width:92% !important;
-    max-width:92% !important;
-
-    left:50% !important;
-    right:auto !important;
-
-    transform:translateX(-50%) !important;
-
-    max-height:80dvh !important;
-    overflow-y:auto !important;
-  }
-
-  .modal table{
-    width:100% !important;
-  }
-
-  .modal td{
-    font-size:13px !important;
-
-    padding:7px !important;
-  }
-
-}
 
 /* =========================================================
    FINAL 3-FIX PATCH
@@ -1959,5 +998,220 @@ body.feedback-mode{
     max-width:none !important;
     margin:0 4px !important;
     padding:10px 8px !important;
+  }
+}
+
+
+/* =========================================================
+   FINAL PROTECTIVE MOBILE OVERRIDE
+   ========================================================= */
+@media(max-width:900px){
+  body:not(.result-mode):not(.feedback-mode) #appShell{
+    display:flex !important;
+    flex-direction:column !important;
+    height:100dvh !important;
+    max-height:100dvh !important;
+    overflow:hidden !important;
+  }
+
+  .main{
+    flex:1 1 0 !important;
+    min-height:0 !important;
+    height:0 !important;
+    overflow:hidden !important;
+  }
+
+  .content{
+    flex:1 1 0 !important;
+    min-height:0 !important;
+    height:0 !important;
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    padding-bottom:85px !important;
+  }
+
+  #optionContainer:not(.imageOptions){
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    gap:8px !important;
+  }
+
+  #optionContainer:not(.imageOptions) .option{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    flex:0 0 auto !important;
+  }
+
+  .footer{
+    position:relative !important;
+    left:auto !important;
+    right:auto !important;
+    bottom:auto !important;
+    flex:0 0 52px !important;
+    height:52px !important;
+    min-height:52px !important;
+    width:100% !important;
+    z-index:100 !important;
+  }
+}
+
+
+/* =========================================================
+   FINAL YOUR LANGUAGE MODAL FIX
+   - full modal visible on mobile
+   - X close button always visible
+   - modal content scrolls if needed
+   ========================================================= */
+
+#langModal1{
+  position:fixed !important;
+  top:50% !important;
+  left:50% !important;
+  right:auto !important;
+  bottom:auto !important;
+
+  transform:translate(-50%, -50%) !important;
+
+  width:min(560px, calc(100vw - 24px)) !important;
+  max-width:calc(100vw - 24px) !important;
+  min-width:0 !important;
+
+  max-height:calc(100dvh - 32px) !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+
+  background:#fff !important;
+  border:2px solid #111 !important;
+  border-radius:9px !important;
+
+  box-sizing:border-box !important;
+  z-index:999999 !important;
+
+  -webkit-overflow-scrolling:touch !important;
+}
+
+/* Keep title + X visible while modal content scrolls */
+#langModal1 .modal-head{
+  position:sticky !important;
+  top:0 !important;
+  z-index:10 !important;
+
+  width:100% !important;
+  min-height:42px !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+
+  margin:0 !important;
+  padding:10px 12px !important;
+
+  box-sizing:border-box !important;
+
+  background:#050505 !important;
+  color:#fff !important;
+
+  font-size:16px !important;
+  font-weight:700 !important;
+}
+
+/* X close button */
+#langModal1 .close{
+  float:none !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  flex:0 0 34px !important;
+  width:34px !important;
+  height:34px !important;
+
+  margin-left:12px !important;
+  padding:0 !important;
+
+  border-radius:50% !important;
+
+  color:#fff !important;
+  background:#333 !important;
+
+  font-size:25px !important;
+  line-height:1 !important;
+  font-weight:400 !important;
+
+  cursor:pointer !important;
+  user-select:none !important;
+  touch-action:manipulation !important;
+}
+
+/* Translation table */
+#langModal1 table{
+  width:100% !important;
+  max-width:100% !important;
+
+  margin:0 !important;
+  border-collapse:collapse !important;
+  table-layout:fixed !important;
+
+  background:#fff !important;
+}
+
+#langModal1 td{
+  border:1px solid #bbb !important;
+  padding:12px !important;
+
+  vertical-align:top !important;
+
+  font-size:15px !important;
+  line-height:1.55 !important;
+
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  word-break:normal !important;
+}
+
+#langModal1 td:first-child{
+  width:82px !important;
+  font-weight:700 !important;
+  background:#f5f5f5 !important;
+}
+
+@media(max-width:600px){
+
+  #langModal1{
+    width:calc(100vw - 16px) !important;
+    max-width:calc(100vw - 16px) !important;
+
+    max-height:calc(100dvh - 20px) !important;
+  }
+
+  #langModal1 .modal-head{
+    min-height:44px !important;
+    padding:8px 10px !important;
+    font-size:15px !important;
+  }
+
+  #langModal1 .close{
+    flex-basis:32px !important;
+    width:32px !important;
+    height:32px !important;
+    font-size:23px !important;
+  }
+
+  #langModal1 td{
+    padding:10px 8px !important;
+    font-size:14px !important;
+    line-height:1.5 !important;
+  }
+
+  #langModal1 td:first-child{
+    width:72px !important;
   }
 }

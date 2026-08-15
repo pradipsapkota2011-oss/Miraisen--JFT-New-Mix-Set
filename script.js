@@ -2,6 +2,7 @@ let userAnswers = [];
 let currentQuestion = 0;
 let totalSeconds = 60 * 60;
 let submitted = false;
+let timerIntervalId = null;
 
 // Listening audio control
 let audioPlayCounts = {};
@@ -61,26 +62,276 @@ function stripHtml(text){
   return String(text || "").replace(/<[^>]*>/g, "");
 }
 
+// =========================================================
+// BILINGUAL QUESTION DISPLAY
+// If questions.js contains an English translation plus the original
+// Japanese question, English is shown first and Japanese directly below.
+// No text is invented; only fields already present in questions.js are used.
+// =========================================================
+function cleanDisplayText(value){
+  return String(value || "").trim();
+}
+
+function getExistingEnglishQuestion(q){
+  if(!q) return "";
+
+  const candidates = [
+    q.translation && q.translation.en && q.translation.en.question,
+    q.questionEn,
+    q.questionEN,
+    q.englishQuestion,
+    q.questionEnglish,
+    q.enQuestion
+  ];
+
+  for(const value of candidates){
+    if(cleanDisplayText(value)) return cleanDisplayText(value);
+  }
+
+  return "";
+}
+
+function getExistingJapaneseQuestion(q){
+  if(!q) return "";
+
+  const candidates = [
+    q.questionJa,
+    q.questionJA,
+    q.questionJp,
+    q.questionJP,
+    q.japaneseQuestion,
+    q.questionJapanese,
+    q.jpQuestion
+  ];
+
+  for(const value of candidates){
+    if(cleanDisplayText(value)) return cleanDisplayText(value);
+  }
+
+  // In translation-based question files, q.question is normally the
+  // original Japanese question, so use it as the Japanese text.
+  if(
+    q.translation &&
+    q.translation.en &&
+    cleanDisplayText(q.translation.en.question) &&
+    cleanDisplayText(q.question)
+  ){
+    return cleanDisplayText(q.question);
+  }
+
+  return cleanDisplayText(q.question);
+}
+
+function buildBilingualQuestionHtml(q, cssClass="mainQuestion"){
+  const english = getExistingEnglishQuestion(q);
+  const japanese = getExistingJapaneseQuestion(q);
+
+  if(english && japanese && stripHtml(english) !== stripHtml(japanese)){
+    return `
+      <div class="${cssClass} bilingual-question">
+        <div class="question-english">${english}</div>
+        <div class="question-japanese">${japanese}</div>
+      </div>
+    `;
+  }
+
+  const single = japanese || english;
+  return single ? `<div class="${cssClass}">${single}</div>` : "";
+}
+
+function getExistingEnglishPartQuestion(part){
+  if(!part) return "";
+  const candidates = [
+    part.translation && part.translation.en && (part.translation.en.title || part.translation.en.question),
+    part.titleEn,
+    part.questionEn,
+    part.englishTitle,
+    part.englishQuestion
+  ];
+  for(const value of candidates){
+    if(cleanDisplayText(value)) return cleanDisplayText(value);
+  }
+  return "";
+}
+
+function getExistingJapanesePartQuestion(part){
+  if(!part) return "";
+  const explicit = [
+    part.titleJa,
+    part.titleJp,
+    part.questionJa,
+    part.questionJp,
+    part.japaneseTitle,
+    part.japaneseQuestion
+  ];
+  for(const value of explicit){
+    if(cleanDisplayText(value)) return cleanDisplayText(value);
+  }
+  return cleanDisplayText(part.title || part.question);
+}
+
+function buildBilingualPartTitleHtml(part){
+  const english = getExistingEnglishPartQuestion(part);
+  const japanese = getExistingJapanesePartQuestion(part);
+
+  if(english && japanese && stripHtml(english) !== stripHtml(japanese)){
+    return `
+      <div class="part-title-english">${english}</div>
+      <div class="part-title-japanese">${japanese}</div>
+    `;
+  }
+
+  return japanese || english || "";
+}
+
+
+// =========================================================
+// DYNAMIC SECTION BOUNDARIES
+// Finds the start of Conversation/Expression, Listening and Reading
+// from questions.js so this works even when section sizes differ.
+// =========================================================
+function normalizeSectionValue(value){
+  return String(value || "").trim().toLowerCase();
+}
+
+function getQuestionSectionBucket(q){
+  const s = normalizeSectionValue(q && q.section);
+
+  if(
+    s.includes("reading") ||
+    s.includes("読解")
+  ){
+    return 3;
+  }
+
+  if(
+    s.includes("listening") ||
+    s.includes("聴解")
+  ){
+    return 2;
+  }
+
+  if(
+    s.includes("expression") ||
+    s.includes("conversation") ||
+    s.includes("会話") ||
+    s.includes("表現")
+  ){
+    return 1;
+  }
+
+  // Vocabulary / Grammar / Script / Kanji etc. remain in section 1.
+  return 0;
+}
+
+function getSectionDefinitions(){
+  const total = Array.isArray(questions) ? questions.length : 0;
+
+  let conversationStart = -1;
+  let listeningStart = -1;
+  let readingStart = -1;
+
+  for(let i = 0; i < total; i++){
+    const bucket = getQuestionSectionBucket(questions[i]);
+
+    if(bucket === 1 && conversationStart < 0){
+      conversationStart = i;
+    }
+
+    if(bucket === 2 && listeningStart < 0){
+      listeningStart = i;
+    }
+
+    if(bucket === 3 && readingStart < 0){
+      readingStart = i;
+    }
+  }
+
+  // Safe fallbacks keep the sections in valid order.
+  if(conversationStart < 0){
+    conversationStart = listeningStart >= 0
+      ? listeningStart
+      : (readingStart >= 0 ? readingStart : total);
+  }
+
+  if(listeningStart < 0){
+    listeningStart = readingStart >= 0
+      ? readingStart
+      : total;
+  }
+
+  if(readingStart < 0){
+    readingStart = total;
+  }
+
+  conversationStart = Math.max(0, Math.min(conversationStart, total));
+  listeningStart = Math.max(conversationStart, Math.min(listeningStart, total));
+  readingStart = Math.max(listeningStart, Math.min(readingStart, total));
+
+  return [
+    {
+      name: "Script & Vocabulary",
+      displayName: "Script and Vocabulary",
+      start: 0,
+      end: conversationStart
+    },
+    {
+      name: "Conversation & Expression",
+      displayName: "Conversation and Expression",
+      start: conversationStart,
+      end: listeningStart
+    },
+    {
+      name: "Listening",
+      displayName: "Listening",
+      start: listeningStart,
+      end: readingStart
+    },
+    {
+      name: "Reading",
+      displayName: "Reading",
+      start: readingStart,
+      end: total
+    }
+  ];
+}
+
+function getCurrentSectionIndex(index = currentQuestion){
+  const defs = getSectionDefinitions();
+
+  for(let i = 0; i < defs.length; i++){
+    const section = defs[i];
+
+    if(
+      index >= section.start &&
+      (
+        index < section.end ||
+        (i === defs.length - 1 && index <= section.end)
+      )
+    ){
+      return i;
+    }
+  }
+
+  return Math.max(0, defs.length - 1);
+}
 
 function getSectionName(){
-  if(currentQuestion < 12) return "Script and Vocabulary";
-  if(currentQuestion < 24) return "Conversation and Expression";
-  if(currentQuestion < 33) return "Listening";
-  return "Reading";
+  const defs = getSectionDefinitions();
+  const section = defs[getCurrentSectionIndex()];
+  return section ? section.displayName : "Script and Vocabulary";
 }
 
 function getSectionStart(){
-  if(currentQuestion < 12) return 0;
-  if(currentQuestion < 24) return 12;
-  if(currentQuestion < 33) return 24;
-  return 33;
+  const defs = getSectionDefinitions();
+  const section = defs[getCurrentSectionIndex()];
+  return section ? section.start : 0;
 }
 
 function getSectionEnd(){
-  if(currentQuestion < 12) return 12;
-  if(currentQuestion < 24) return 24;
-  if(currentQuestion < 33) return 33;
-  return questions.length;
+  const defs = getSectionDefinitions();
+  const section = defs[getCurrentSectionIndex()];
+  return section ? section.end : questions.length;
 }
 
 function getSectionQuestionNumber(){
@@ -88,12 +339,16 @@ function getSectionQuestionNumber(){
 }
 
 function updateSectionHighlight(){
-  document.querySelectorAll(".sec").forEach(sec => sec.classList.remove("activeSec"));
+  document.querySelectorAll(".sec").forEach(sec => {
+    sec.classList.remove("activeSec");
+  });
 
-  if(currentQuestion < 12) document.getElementById("sec1").classList.add("activeSec");
-  else if(currentQuestion < 24) document.getElementById("sec2").classList.add("activeSec");
-  else if(currentQuestion < 33) document.getElementById("sec3").classList.add("activeSec");
-  else document.getElementById("sec4").classList.add("activeSec");
+  const index = getCurrentSectionIndex();
+  const el = document.getElementById("sec" + (index + 1));
+
+  if(el){
+    el.classList.add("activeSec");
+  }
 }
 
 function loadQuestion(){
@@ -112,14 +367,15 @@ function loadQuestion(){
     html += `<div class="subtitle">${q.subtitle}</div>`;
   }
 
-  // Normal question: show main question here
-  if(q.question && q.type !== "dialog" && q.type !== "double"){
-    html += `<div class="mainQuestion">${q.question}</div>`;
+  // Normal question: when English + Japanese both exist,
+  // show English first and Japanese directly underneath.
+  if(q.type !== "dialog" && q.type !== "double"){
+    html += buildBilingualQuestionHtml(q, "mainQuestion");
   }
 
-  // Double question: show instruction/title only here
-  if(q.type === "double" && q.question){
-    html += `<div class="instruction">${q.question}</div>`;
+  // Double question main prompt can also be bilingual.
+  if(q.type === "double"){
+    html += buildBilingualQuestionHtml(q, "instruction");
   }
 
   document.getElementById("questionText").innerHTML = html;
@@ -331,7 +587,7 @@ function loadDoubleQuestion(q){
 
     const title = document.createElement("div");
     title.className = "partTitle";
-    title.innerHTML = part.title || part.question || "";
+    title.innerHTML = buildBilingualPartTitleHtml(part);
     partBox.appendChild(title);
 
     const row = document.createElement("div");
@@ -413,10 +669,237 @@ function makePalette(){
   }
 }
 
+
+// =========================================================
+// SECTION-WISE RESULT
+// Uses the dynamic section boundaries above.
+// Double-question parts count as separate answer items.
+// =========================================================
+function getSectionWiseStats(){
+  return getSectionDefinitions().map(section => {
+    let correct = 0;
+    let wrong = 0;
+    let unanswered = 0;
+    let total = 0;
+
+    const end = Math.min(section.end, questions.length);
+
+    for(let index = section.start; index < end; index++){
+      const q = questions[index];
+      if(!q) continue;
+
+      if(q.type === "double" && Array.isArray(q.parts)){
+        q.parts.forEach((part, partIndex) => {
+          total++;
+          const selected =
+            userAnswers[index] &&
+            userAnswers[index][partIndex] !== undefined
+              ? userAnswers[index][partIndex]
+              : undefined;
+
+          if(selected === undefined || selected === null){
+            unanswered++;
+          }else if(selected === part.answer){
+            correct++;
+          }else{
+            wrong++;
+          }
+        });
+      }else{
+        total++;
+        const selected = userAnswers[index];
+
+        if(selected === undefined || selected === null){
+          unanswered++;
+        }else if(selected === q.answer){
+          correct++;
+        }else{
+          wrong++;
+        }
+      }
+    }
+
+    const percentage = total
+      ? Math.round((correct / total) * 100)
+      : 0;
+
+    return {
+      ...section,
+      correct,
+      wrong,
+      unanswered,
+      total,
+      percentage
+    };
+  });
+}
+
+function getSectionWisePercentHtml(){
+  return `
+    <section class="section-performance">
+      <h2>Section-wise Performance</h2>
+      <div class="section-performance-grid">
+        ${getSectionWiseStats().map(section => `
+          <div class="section-performance-card">
+            <div class="section-performance-title">${section.name}</div>
+            <div class="section-performance-row">
+              <span>${section.correct} / ${section.total} correct</span>
+              <strong>${section.percentage}%</strong>
+            </div>
+            <div class="section-performance-bar">
+              <div class="section-performance-fill" style="width:${section.percentage}%"></div>
+            </div>
+            <div class="section-performance-small">
+              Wrong: ${section.wrong} &nbsp; | &nbsp; Unanswered: ${section.unanswered}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function getFeedbackAnswerHtml(options, selectedIndex){
+  if(selectedIndex === undefined || selectedIndex === null){
+    return `<span class="feedback-unanswered">Unanswered</span>`;
+  }
+
+  if(!Array.isArray(options) || options[selectedIndex] === undefined){
+    return `<span class="feedback-unanswered">Unanswered</span>`;
+  }
+
+  const item = options[selectedIndex];
+
+  if(typeof item === "string"){
+    return item;
+  }
+
+  let html = "";
+  if(item && item.image){
+    html += `<img src="${item.image}" class="feedback-answer-img" alt="">`;
+  }
+  if(item && item.text){
+    html += `<div>${item.text}</div>`;
+  }
+  return html || "";
+}
+
+function getFeedbackRowsData(){
+  const rows = [];
+  let no = 1;
+
+  questions.forEach((q, index) => {
+    const defs = getSectionDefinitions();
+    const sectionIndex = (() => {
+      for(let s = 0; s < defs.length; s++){
+        if(index >= defs[s].start && index < defs[s].end) return s;
+      }
+      return defs.length - 1;
+    })();
+    const section = defs[sectionIndex] ? defs[sectionIndex].name : "Reading";
+
+    if(q.type === "double" && Array.isArray(q.parts)){
+      q.parts.forEach((part, partIndex) => {
+        const selected =
+          userAnswers[index] &&
+          userAnswers[index][partIndex] !== undefined
+            ? userAnswers[index][partIndex]
+            : undefined;
+
+        rows.push({
+          no: no++,
+          section,
+          result: selected === part.answer,
+          selected: getFeedbackAnswerHtml(part.options, selected),
+          correct: getFeedbackAnswerHtml(part.options, part.answer)
+        });
+      });
+    }else{
+      const selected = userAnswers[index];
+      rows.push({
+        no: no++,
+        section,
+        result: selected === q.answer,
+        selected: getFeedbackAnswerHtml(q.options, selected),
+        correct: getFeedbackAnswerHtml(q.options, q.answer)
+      });
+    }
+  });
+
+  return rows;
+}
+
+function showTestFeedbackPage(){
+  const rows = getFeedbackRowsData();
+
+  document.documentElement.classList.add("feedback-mode");
+  document.body.classList.remove("result-mode");
+  document.body.classList.add("feedback-mode");
+
+  document.body.innerHTML = `
+    <div id="feedbackPage">
+      <div class="feedback-top">
+        <h2>Test Feedback</h2>
+        <button type="button" class="exit-test-btn" onclick="location.reload()">Exit Test</button>
+      </div>
+      <div class="feedback-green-line"></div>
+
+      <div class="feedback-box">
+        <div class="feedback-title">Section-wise Performance</div>
+        <div class="feedback-section-summary">
+          ${getSectionWiseStats().map(section => `
+            <span>${section.name}: ${section.correct}/${section.total} (${section.percentage}%)</span>
+          `).join("")}
+        </div>
+
+        <div class="feedback-table-wrap">
+          <table class="feedback-table">
+            <thead>
+              <tr>
+                <th>No.</th>
+                <th>Section</th>
+                <th>Result</th>
+                <th>Selected Answer</th>
+                <th>Correct Answer</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(row => `
+                <tr>
+                  <td class="feedback-no-cell">${row.no}</td>
+                  <td>${row.section}</td>
+                  <td class="feedback-result-cell ${row.result ? "correct-mark" : "wrong-mark"}">
+                    ${row.result ? "○" : "×"}
+                  </td>
+                  <td>${row.selected}</td>
+                  <td>${row.correct}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  window.scrollTo(0, 0);
+}
+
+function setupResultFinishButton(){
+  const btn = document.getElementById("resultFinishBtn");
+  if(!btn) return;
+
+  btn.onclick = function(e){
+    if(e) e.preventDefault();
+    showTestFeedbackPage();
+  };
+}
+
 function submitTest(){
   if(submitted) return;
   closeSubmitConfirm();
   submitted = true;
+  setNavigationLock(true);
 
   let correct = 0;
   let wrong = 0;
@@ -426,7 +909,7 @@ function submitTest(){
   for(let i = 0; i < questions.length; i++){
     const q = questions[i];
 
-    if(q.type === "double"){
+    if(q.type === "double" && Array.isArray(q.parts)){
       q.parts.forEach((part, partIndex) => {
         totalMarks++;
 
@@ -450,40 +933,81 @@ function submitTest(){
       }
     }
   }
-  let finalScore = Math.round((correct / totalMarks) * 250);
-let status = finalScore >= 200 ? "PASS" : "FAIL";
-  let percent = Math.round((correct / totalMarks) * 100);
+
+  const finalScore = totalMarks
+    ? Math.round((correct / totalMarks) * 250)
+    : 0;
+
+  const percent = totalMarks
+    ? Math.round((correct / totalMarks) * 100)
+    : 0;
+
+  const status = finalScore >= 200 ? "PASS" : "FAIL";
 
   document.getElementById("scoreText").innerHTML =
-  `<b>Total Score:</b> ${finalScore} / 250`;
+    `<b>Total Score:</b> ${finalScore} / 250`;
 
-document.getElementById("correctText").innerHTML =
-  `<b>Correct:</b> ${correct} / ${totalMarks}`;
+  document.getElementById("correctText").innerHTML =
+    `<b>Correct:</b> ${correct} / ${totalMarks}`;
 
-document.getElementById("wrongText").innerHTML =
-  `<b>Wrong:</b> ${wrong}`;
+  document.getElementById("wrongText").innerHTML =
+    `<b>Wrong:</b> ${wrong}`;
 
-document.getElementById("unansweredText").innerHTML =
-  `<b>Unanswered:</b> ${unanswered}`;
+  document.getElementById("unansweredText").innerHTML =
+    `<b>Unanswered:</b> ${unanswered}`;
 
-document.getElementById("percentText").innerHTML =
-  `<b>Percentage:</b> ${percent}%<br><br>
-   <b>Result:</b>
-   <span style="font-size:30px;font-weight:bold;color:${status === "PASS" ? "green" : "red"}">
-     ${status}
-   </span>`;
+  document.getElementById("percentText").innerHTML =
+    `<b>Percentage:</b> ${percent}%<br><br>
+     <b>Result:</b>
+     <span style="font-size:30px;font-weight:bold;color:${status === "PASS" ? "green" : "red"}">
+       ${status}
+     </span>`;
 
- // Hide Test Screen
-document.querySelector(".top").style.display = "none";
-document.querySelector(".green").style.display = "none";
-document.querySelector(".main").style.display = "none";
-document.querySelector(".footer").style.display = "none";
+  const sectionBox = document.getElementById("sectionPercentText");
+  if(sectionBox){
+    sectionBox.innerHTML = getSectionWisePercentHtml();
+  }
 
-// Show Result Screen
-document.getElementById("resultPage").style.display = "block";
+  if(timerIntervalId){
+    clearInterval(timerIntervalId);
+    timerIntervalId = null;
+  }
 
-  // Result page ko Finish/Exit/Done button click garda full Test Feedback page kholne
+  const top = document.querySelector(".top");
+  const green = document.querySelector(".green");
+  const main = document.querySelector(".main");
+  const footer = document.querySelector(".footer");
+
+  if(top) top.style.display = "none";
+  if(green) green.style.display = "none";
+  if(main) main.style.display = "none";
+  if(footer) footer.style.display = "none";
+
+  document.documentElement.classList.add("result-mode");
+  document.body.classList.add("result-mode");
+
+  const appShell = document.getElementById("appShell");
+  if(appShell){
+    appShell.style.setProperty("height", "auto", "important");
+    appShell.style.setProperty("min-height", "100vh", "important");
+    appShell.style.setProperty("max-height", "none", "important");
+    appShell.style.setProperty("overflow", "visible", "important");
+    appShell.style.setProperty("display", "block", "important");
+  }
+
+  const resultPage = document.getElementById("resultPage");
+  if(resultPage){
+    resultPage.style.setProperty("display", "block", "important");
+    resultPage.style.setProperty("height", "auto", "important");
+    resultPage.style.setProperty("min-height", "100vh", "important");
+    resultPage.style.setProperty("max-height", "none", "important");
+    resultPage.style.setProperty("overflow", "visible", "important");
+  }
+
   setupResultFinishButton();
+  setNavigationLock(false);
+
+  window.scrollTo(0, 0);
 }
 
 function closeResult(){
@@ -518,8 +1042,96 @@ function closeLanguage1(){
   document.getElementById("langModal1").style.display = "none";
 }
 
+
+// =========================================================
+// SECTION FINISH / NEXT SECTION YES-NO CONFIRMATION
+// =========================================================
+function getNextSectionName(){
+  const defs = getSectionDefinitions();
+  const currentIndex = getCurrentSectionIndex();
+  const next = defs[currentIndex + 1];
+
+  if(!next || next.start >= questions.length){
+    return "";
+  }
+
+  return next.displayName;
+}
+
+function showNextSectionConfirm(onYes){
+  const old = document.getElementById("nextSectionConfirmBox");
+  if(old) old.remove();
+
+  const nextSection = getNextSectionName();
+
+  // Final section has no next section; submit instead.
+  if(!nextSection){
+    openSubmitConfirm();
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "nextSectionConfirmBox";
+  overlay.className = "section-confirm-overlay";
+
+  overlay.innerHTML = `
+    <div class="section-confirm-card">
+      <div class="section-confirm-title">Section Completed</div>
+
+      <p>
+        You have completed <b>${getSectionName()}</b>.
+      </p>
+
+      <p>
+        Do you want to go to the next section
+        <b>${nextSection}</b>?
+      </p>
+
+      <div class="section-confirm-actions">
+        <button type="button" id="nextSectionYes" class="confirmYes">Yes</button>
+        <button type="button" id="nextSectionNo" class="confirmNo">No</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById("nextSectionYes").onclick = function(){
+    overlay.remove();
+    if(typeof onYes === "function") onYes();
+  };
+
+  document.getElementById("nextSectionNo").onclick = function(){
+    overlay.remove();
+  };
+}
+
+function moveToNextSection(){
+  const nextIndex = getSectionEnd();
+
+  showNextSectionConfirm(function(){
+    if(nextIndex < questions.length){
+      currentQuestion = nextIndex;
+      loadQuestion();
+    }else{
+      openSubmitConfirm();
+    }
+  });
+}
+
+
 document.getElementById("nextBtn").onclick = function(){
   if(audioPlayingNow) return;
+
+  const sectionEnd = getSectionEnd();
+  const isLastQuestionOfSection =
+    currentQuestion === sectionEnd - 1 &&
+    currentQuestion < questions.length - 1;
+
+  if(isLastQuestionOfSection){
+    moveToNextSection();
+    return;
+  }
 
   if(currentQuestion < questions.length - 1){
     currentQuestion++;
@@ -568,7 +1180,15 @@ document.getElementById("backBtn").onclick = function(){
 
 document.querySelector(".finish").onclick = function(){
   if(audioPlayingNow) return;
-  submitTest();
+
+  // In sections 1-3, Finish Section asks Yes/No to go to the next section.
+  if(getSectionEnd() < questions.length){
+    moveToNextSection();
+    return;
+  }
+
+  // In Reading (last section), Finish Section submits the whole test.
+  openSubmitConfirm();
 };
 
 function updateTimer(){
@@ -650,535 +1270,6 @@ limitedAudioPlayer.addEventListener("seeking", function(){
   }
 });
 
-
-// =========================================================
-// FINAL FULL TEST FEEDBACK PAGE
-// Submit Result -> Pass/Fail Result -> Finish -> All feedback
-// This version shows every question item, including double parts.
-// =========================================================
-
-function setupResultFinishButton(){
-  const resultPage = document.getElementById("resultPage");
-  if(!resultPage) return;
-
-  // Avoid duplicate listener
-  if(!resultPage.dataset.fullFeedbackHandler){
-    resultPage.addEventListener("click", function(e){
-      const btn = e.target.closest("button, input[type='button'], input[type='submit'], .finish, .resultFinishBtn");
-      if(!btn) return;
-
-      const text = ((btn.innerText || btn.value || btn.textContent || "") + " " + (btn.className || "")).toLowerCase();
-
-      if(
-        text.includes("finish") ||
-        text.includes("exit") ||
-        text.includes("done") ||
-        text.includes("終了") ||
-        text.includes("完了") ||
-        btn.classList.contains("finish") ||
-        btn.classList.contains("resultFinishBtn")
-      ){
-        e.preventDefault();
-        e.stopPropagation();
-        if(typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
-        showTestFeedbackPage();
-        return false;
-      }
-    }, true);
-
-    resultPage.dataset.fullFeedbackHandler = "1";
-  }
-
-  // Result page ma Finish button chaina bhane automatic add garne
-  const hasFinishButton = Array.from(resultPage.querySelectorAll("button, input[type='button'], input[type='submit'], .finish, .resultFinishBtn"))
-    .some(btn => {
-      const text = ((btn.innerText || btn.value || btn.textContent || "") + " " + (btn.className || "")).toLowerCase();
-      return text.includes("finish") || text.includes("exit") || text.includes("done") || text.includes("終了") || text.includes("完了") || btn.classList.contains("finish");
-    });
-
-  if(!hasFinishButton && !document.getElementById("resultFeedbackFinishBtn")){
-    const wrap = document.createElement("div");
-    wrap.style.textAlign = "center";
-    wrap.style.margin = "25px 0";
-
-    const btn = document.createElement("button");
-    btn.id = "resultFeedbackFinishBtn";
-    btn.className = "resultFinishBtn";
-    btn.type = "button";
-    btn.innerText = "Finish";
-    btn.onclick = function(e){
-      if(e) e.preventDefault();
-      showTestFeedbackPage();
-      return false;
-    };
-
-    wrap.appendChild(btn);
-    resultPage.appendChild(wrap);
-  }
-}
-
-function ensureFeedbackStyle(){
-  let style = document.getElementById("feedbackPageStyle");
-  if(style) style.remove();
-
-  style = document.createElement("style");
-  style.id = "feedbackPageStyle";
-  style.innerHTML = `
-    html, body{
-      height:auto !important;
-      min-height:100% !important;
-      overflow-y:auto !important;
-      overflow-x:auto !important;
-      margin:0;
-      padding:0;
-    }
-
-    body{
-      background:#f4f4f4 !important;
-      font-family:Arial, Helvetica, sans-serif;
-      color:#000;
-    }
-
-    #feedbackPage{
-      display:block !important;
-      background:#f4f4f4;
-      min-height:100vh;
-      height:auto !important;
-      overflow:visible !important;
-      position:static !important;
-      width:100%;
-    }
-
-    .feedback-top{
-      background:#000;
-      color:#fff;
-      padding:10px 16px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      position:sticky;
-      top:0;
-      z-index:50;
-    }
-
-    .feedback-top h2{
-      margin:0;
-      font-size:18px;
-      font-weight:700;
-    }
-
-    .exit-test-btn,
-    .resultFinishBtn{
-      background:#ffdc95;
-      color:#111;
-      border:none;
-      border-radius:4px;
-      padding:9px 28px;
-      font-weight:700;
-      cursor:pointer;
-      box-shadow:0 1px 2px rgba(0,0,0,0.25);
-    }
-
-    .feedback-green-line{
-      height:18px;
-      background:#5b922b;
-    }
-
-    .feedback-box{
-      width:92%;
-      margin:18px auto 35px;
-      background:#fff;
-      border:1px solid #cfcfcf;
-      border-radius:12px 12px 0 0;
-      overflow:visible !important;
-      height:auto !important;
-      max-height:none !important;
-    }
-
-    .feedback-title{
-      background:#000;
-      color:#fff;
-      padding:13px 14px;
-      font-weight:700;
-      font-size:15px;
-      border-radius:10px 10px 0 0;
-    }
-
-    .feedback-score-summary{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      padding:12px;
-      background:#fff;
-      border-bottom:1px solid #ddd;
-      font-size:14px;
-    }
-
-    .feedback-score-summary span{
-      display:inline-block;
-      background:#f3f3f3;
-      border:1px solid #ddd;
-      border-radius:6px;
-      padding:7px 10px;
-      font-weight:700;
-    }
-
-    .feedback-note{
-      padding:8px 12px 12px;
-      font-size:13px;
-      color:#333;
-      border-bottom:1px solid #ddd;
-    }
-
-    .feedback-table-wrap{
-      width:100%;
-      overflow-x:auto !important;
-      overflow-y:visible !important;
-      height:auto !important;
-      max-height:none !important;
-      background:#fff;
-    }
-
-    .feedback-table{
-      width:100%;
-      border-collapse:collapse;
-      table-layout:fixed;
-      background:#fff;
-      height:auto !important;
-    }
-
-    .feedback-table thead{
-      display:table-header-group !important;
-    }
-
-    .feedback-table tbody{
-      display:table-row-group !important;
-      height:auto !important;
-      max-height:none !important;
-      overflow:visible !important;
-    }
-
-    .feedback-table tr{
-      display:table-row !important;
-    }
-
-    .feedback-table th,
-    .feedback-table td{
-      border:1px solid #d8d8d8;
-      padding:12px 10px;
-      vertical-align:middle;
-      font-size:14px;
-      line-height:1.45;
-      word-break:break-word;
-      background:#fff;
-    }
-
-    .feedback-table th{
-      background:#efefef;
-      text-align:center;
-      font-weight:700;
-    }
-
-    .feedback-table th span,
-    .feedback-table td span{
-      font-size:11px;
-      color:#000;
-      font-weight:600;
-    }
-
-    .feedback-no-cell{
-      width:6%;
-      text-align:center;
-      font-weight:700;
-    }
-
-    .feedback-section-cell{
-      text-align:center;
-      font-weight:700;
-      width:13%;
-    }
-
-    .feedback-category-cell{
-      width:21%;
-    }
-
-    .feedback-result-cell{
-      text-align:center;
-      width:8%;
-      font-size:22px !important;
-      font-weight:700;
-    }
-
-    .feedback-selected-cell{
-      width:26%;
-    }
-
-    .feedback-correct-cell{
-      width:26%;
-    }
-
-    .correct-mark{ color:green; }
-    .wrong-mark{ color:blue; }
-
-    .feedback-answer-img{
-      width:100px;
-      max-height:90px;
-      object-fit:contain;
-      display:block;
-      margin:0 auto;
-    }
-
-    .feedback-unanswered{
-      font-weight:700;
-    }
-
-    @media(max-width:768px){
-      .feedback-box{ width:96%; margin:10px auto 25px; }
-      .feedback-table{ min-width:900px; }
-      .feedback-table th, .feedback-table td{ padding:10px 8px; font-size:13px; }
-      .feedback-answer-img{ width:80px; }
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-function getFeedbackSectionLabel(index){
-  if(index < 12){
-    return "文字<br>と<br>語彙<br><span>Script<br>and<br>Vocabulary</span>";
-  }
-  if(index < 24){
-    return "会話<br>と<br>表現<br><span>Conversation<br>and<br>Expression</span>";
-  }
-  if(index < 33){
-    return "聴解<br><span>Listening<br>Comprehension</span>";
-  }
-  return "読解<br><span>Reading<br>Comprehension</span>";
-}
-
-function getFeedbackCategoryLabel(q, index, partIndex){
-  if(index < 4){
-    return "語の意味<br><span>Word Meaning</span>";
-  }
-  if(index < 7){
-    return "語の用法<br><span>Word Usage</span>";
-  }
-  if(index < 11){
-    return "漢字の読み<br><span>Kanji Reading</span>";
-  }
-  if(index < 12){
-    return "漢字の意味と用法<br><span>Kanji Meaning and Usage</span>";
-  }
-  if(index < 24){
-    if(q.section === "Grammar"){
-      return "文法<br><span>Grammar</span>";
-    }
-    return "表現<br><span>Expression</span>";
-  }
-  if(index < 33){
-    if(partIndex !== undefined && partIndex !== null){
-      return "内容理解<br><span>Comprehending Content</span>";
-    }
-    return "内容理解<br><span>Comprehending Content</span>";
-  }
-  return "内容理解<br><span>Reading Comprehension</span>";
-}
-
-function getFeedbackAnswerHtml(options, index){
-  if(index === undefined || index === null || index === ""){
-    return `<span class="feedback-unanswered">未解答</span><br><span>Unanswered</span>`;
-  }
-
-  if(!options || !options[index]){
-    return `<span class="feedback-unanswered">未解答</span><br><span>Unanswered</span>`;
-  }
-
-  const item = options[index];
-
-  if(typeof item === "string"){
-    return item;
-  }
-
-  let html = "";
-
-  if(item.image){
-    html += `<img src="${item.image}" class="feedback-answer-img" alt="">`;
-  }
-
-  if(item.text){
-    html += `<div style="text-align:center;">${item.text}</div>`;
-  }
-
-  return html || "";
-}
-
-function getFeedbackRowsData(){
-  const rows = [];
-  let displayNo = 1;
-
-  questions.forEach((q, index) => {
-    if(q.type === "double" && q.parts){
-      q.parts.forEach((part, partIndex) => {
-        const selected = userAnswers[index] ? userAnswers[index][partIndex] : undefined;
-        const isCorrect = selected === part.answer;
-        rows.push({
-          no: displayNo,
-          section: getFeedbackSectionLabel(index),
-          category: getFeedbackCategoryLabel(q, index, partIndex),
-          result: isCorrect,
-          selected: getFeedbackAnswerHtml(part.options, selected),
-          correct: getFeedbackAnswerHtml(part.options, part.answer)
-        });
-        displayNo++;
-      });
-    }else{
-      const selected = userAnswers[index];
-      const isCorrect = selected === q.answer;
-      rows.push({
-        no: displayNo,
-        section: getFeedbackSectionLabel(index),
-        category: getFeedbackCategoryLabel(q, index, null),
-        result: isCorrect,
-        selected: getFeedbackAnswerHtml(q.options, selected),
-        correct: getFeedbackAnswerHtml(q.options, q.answer)
-      });
-      displayNo++;
-    }
-  });
-
-  return rows;
-}
-
-function getFeedbackRows(){
-  const rows = getFeedbackRowsData();
-
-  const sectionCounts = {};
-  rows.forEach(row => {
-    sectionCounts[row.section] = (sectionCounts[row.section] || 0) + 1;
-  });
-
-  const printedSections = {};
-  let html = "";
-
-  rows.forEach(row => {
-    const showSection = !printedSections[row.section];
-    printedSections[row.section] = true;
-
-    html += `
-      <tr>
-        <td class="feedback-no-cell">${row.no}</td>
-        ${showSection ? `<td class="feedback-section-cell" rowspan="${sectionCounts[row.section]}">${row.section}</td>` : ""}
-        <td class="feedback-category-cell">${row.category}</td>
-        <td class="feedback-result-cell ${row.result ? "correct-mark" : "wrong-mark"}">${row.result ? "○" : "×"}</td>
-        <td class="feedback-selected-cell">${row.selected}</td>
-        <td class="feedback-correct-cell">${row.correct}</td>
-      </tr>
-    `;
-  });
-
-  return html;
-}
-
-function getFeedbackScoreSummaryHtml(){
-  let correct = 0;
-  let wrong = 0;
-  let unanswered = 0;
-  let total = 0;
-
-  questions.forEach((q, index) => {
-    if(q.type === "double" && q.parts){
-      q.parts.forEach((part, partIndex) => {
-        total++;
-        const selected = userAnswers[index] ? userAnswers[index][partIndex] : undefined;
-        if(selected === undefined){
-          unanswered++;
-        }else if(selected === part.answer){
-          correct++;
-        }else{
-          wrong++;
-        }
-      });
-    }else{
-      total++;
-      const selected = userAnswers[index];
-      if(selected === undefined){
-        unanswered++;
-      }else if(selected === q.answer){
-        correct++;
-      }else{
-        wrong++;
-      }
-    }
-  });
-
-  const score = total > 0 ? Math.round((correct / total) * 250) : 0;
-  const percent = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const status = score >= 200 ? "PASS" : "FAIL";
-
-  return `
-    <span>Total Score: ${score} / 250</span>
-    <span>Total Questions: ${total}</span>
-    <span>Correct: ${correct} / ${total}</span>
-    <span>Wrong: ${wrong}</span>
-    <span>Unanswered: ${unanswered}</span>
-    <span>Percentage: ${percent}%</span>
-    <span style="color:${status === "PASS" ? "green" : "red"};">Result: ${status}</span>
-  `;
-}
-
-function showTestFeedbackPage(){
-  ensureFeedbackStyle();
-
-  const totalFeedbackRows = getFeedbackRowsData().length;
-
-  // Full body replace gareko: yesle previous page ko fixed height/overflow problem hataucha.
-  document.body.innerHTML = `
-    <div id="feedbackPage">
-      <div class="feedback-top">
-        <h2>Test Feedback</h2>
-        <button type="button" class="exit-test-btn" onclick="exitTest()">Exit Test</button>
-      </div>
-
-      <div class="feedback-green-line"></div>
-
-      <div class="feedback-box">
-        <div class="feedback-title">Test Result</div>
-        <div class="feedback-score-summary">
-          ${getFeedbackScoreSummaryHtml()}
-        </div>
-        <div class="feedback-note">
-          Showing all ${totalFeedbackRows} question items. Double questions are shown separately as (a) and (b).
-        </div>
-
-        <div class="feedback-table-wrap">
-          <table class="feedback-table">
-            <thead>
-              <tr>
-                <th>No.</th>
-                <th>セクション<br><span>Section</span></th>
-                <th>カテゴリー<br><span>Category</span></th>
-                <th>正誤<br><span>Result</span></th>
-                <th>あなたが選んだ答え<br><span>Selected Answer(s)</span></th>
-                <th>正答<br><span>Correct Answer(s)</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${getFeedbackRows()}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.documentElement.style.overflowY = "auto";
-  document.body.style.overflowY = "auto";
-  window.scrollTo(0, 0);
-}
-
-function exitTest(){
-  location.reload();
-}
-
 loadQuestion();
 updateTimer();
-setInterval(updateTimer, 1000);
+timerIntervalId = setInterval(updateTimer, 1000);
